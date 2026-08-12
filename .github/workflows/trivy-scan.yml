@@ -1,0 +1,34 @@
+name: Trivy IaC Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  trivy-iac-scan:
+    name: Scan Terraform Code with Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Install scan2html Plugin
+        run: trivy plugin install scan2html
+
+      - name: Run Scan & Generate HTML Report
+        run: |
+          trivy scan2html config . --scan2html-flags --output trivy-terraform-report.html
+        continue-on-error: true
+
+      - name: Upload Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-terraform-report
+          path: trivy-terraform-report.html
