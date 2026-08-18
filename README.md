@@ -21,11 +21,11 @@ This repository demonstrates how to integrate continuous IaC vulnerability, misc
 - [Part 1: IaC Security Scanning with Trivy](#part-1-iac-security-scanning-with-trivy)
   - [Trivy Workflow](#trivy-scan-workflow)
   - [Running Trivy Locally](#running-trivy-locally)
-  - [Trivy Scan Reports & Findings](#trivy-scan-reports--findings)
+  - [Trivy Scan Reports & Findings (Screenshots)](#trivy-scan-reports--findings)
 - [Part 2: Policy & Compliance Scanning with Checkov](#part-2-policy--compliance-scanning-with-checkov)
   - [Checkov Workflow](#checkov-scan-workflow)
   - [Running Checkov Locally](#running-checkov-locally)
-  - [Checkov HTML Report & Artifacts](#checkov-html-report--artifacts)
+  - [Checkov Scan Reports & Findings (Screenshots)](#checkov-scan-reports--findings)
 - [Workflow Artifacts](#workflow-artifacts)
 
 ---
@@ -152,16 +152,31 @@ trivy scan2html config ./terraform --scan2html-flags --output trivy-terraform-re
 pip install checkov
 
 # 2. Run scan and export JSON report
-checkov -d ./terraform --framework terraform --output json --output-file-path console,checkov-report.json --soft-fail
+checkov -d ./terraform --framework terraform --output json --soft-fail > checkov-report.json
 
 # 3. Generate interactive HTML report
 python3 scripts/generate_checkov_html.py checkov-report.json checkov-terraform-report.html
+
+# 4. Open in browser
+xdg-open checkov-terraform-report.html
 ```
 
-### Checkov HTML Report & Artifacts
-* **Dashboard Summary:** Total checks, passed checks, failed violations, and skipped policies.
-* **Search & Filters:** Real-time filtering by status (`Passed` / `Failed`) or searching by Check ID (e.g. `CKV_AWS_21`), resource name, or file.
-* **Code Previews:** Collapsible cards showing exact lines of offending Terraform code and remediation links.
+### Checkov Scan Reports & Findings
+
+#### Checkov Overview & Summary Dashboard
+![Checkov Summary Overview](Screenshot%20From%202026-08-18%2012-33-41.png)
+
+#### IAM Privilege Escalation, Exfiltration & Wildcard Action Policy Violations
+![IAM Policy Violations](Screenshot%20From%202026-08-18%2012-33-54.png)
+
+#### RDS Deletion Protection, Performance Insights & Multi-AZ Compliance Checks
+![RDS Compliance Checks](Screenshot%20From%202026-08-18%2012-34-03.png)
+
+#### Passed IAM Policy Documents & Version Tag Validations
+![Passed IAM Documents Checks](Screenshot%20From%202026-08-18%2012-34-14.png)
+
+#### Passed IAM Least Privilege & Secure Assume Role Policies
+![Passed Least Privilege Policies](Screenshot%20From%202026-08-18%2012-34-23.png)
 
 ---
 
