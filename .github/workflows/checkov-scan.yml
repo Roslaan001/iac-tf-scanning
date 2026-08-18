@@ -29,10 +29,8 @@ jobs:
         run: |
           checkov -d ./terraform \
             --framework terraform \
-            --output cli \
             --output json \
-            --output-file-path console,checkov-report.json \
-            --soft-fail
+            --soft-fail > checkov-report.json
         continue-on-error: true
 
       - name: Generate Checkov HTML Report
