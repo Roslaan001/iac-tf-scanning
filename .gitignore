@@ -1,0 +1,20 @@
+# Terraform local state & cache
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.json
+crash.log
+
+# Generated Scan Reports & Temporary Files
+*.html
+*.json
+!scripts/*.json
+trivy-terraform-report/
+checkov-report.json
+sample_checkov.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class

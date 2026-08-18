@@ -1,58 +1,70 @@
-# Infrastructure as Code (IaC) Security Scanning with Trivy
+# Infrastructure as Code (IaC) Security & Compliance Scanning
 
-Automated Infrastructure as Code (IaC) security scanning pipeline using Trivy and GitHub Actions for Terraform code.
+Automated Infrastructure as Code (IaC) security and compliance scanning pipelines using **Trivy** and **Checkov** with GitHub Actions for Terraform.
 
-This repository demonstrates how to integrate continuous IaC vulnerability and misconfiguration scanning into your CI/CD workflow using **Trivy** to detect security risks in Terraform templates before deployment.
+This repository demonstrates how to integrate continuous IaC vulnerability, misconfiguration, and compliance scanning into your CI/CD workflows before provisioning resources in the cloud.
+
+---
+
+## 📑 Article Series
+
+* **Part 1:** [IaC Security Scanning with Trivy](#part-1-iac-security-scanning-with-trivy) — Misconfiguration detection, CVE scanning, and HTML report generation.
+* **Part 2:** [Policy & Compliance Scanning with Checkov](#part-2-policy--compliance-scanning-with-checkov) — CIS benchmarks, policy-as-code validation, and interactive HTML compliance reports.
 
 ---
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Architecture](#architecture)
+- [Overview & Architecture](#overview--architecture)
+- [Tool Comparison: Trivy vs. Checkov](#tool-comparison-trivy-vs-checkov)
 - [Repository Structure](#repository-structure)
-- [Automated IaC Security Scanning (CI/CD)](#automated-iac-security-scanning-cicd)
-  - [Trivy Scan Workflow](#trivy-scan-workflow)
-  - [Running Scans Locally](#running-scans-locally)
-- [Sample Scan Reports & Findings](#sample-scan-reports--findings)
-  - [Scan Overview & Severity Breakdown](#scan-overview--severity-breakdown)
-  - [Detailed Rule & Code Findings](#detailed-rule--code-findings)
+- [Part 1: IaC Security Scanning with Trivy](#part-1-iac-security-scanning-with-trivy)
+  - [Trivy Workflow](#trivy-scan-workflow)
+  - [Running Trivy Locally](#running-trivy-locally)
+  - [Trivy Scan Reports & Findings](#trivy-scan-reports--findings)
+- [Part 2: Policy & Compliance Scanning with Checkov](#part-2-policy--compliance-scanning-with-checkov)
+  - [Checkov Workflow](#checkov-scan-workflow)
+  - [Running Checkov Locally](#running-checkov-locally)
+  - [Checkov HTML Report & Artifacts](#checkov-html-report--artifacts)
 - [Workflow Artifacts](#workflow-artifacts)
 
 ---
 
-## Overview
+## Overview & Architecture
 
-Maintaining secure infrastructure requires **pre-deployment scanning** to catch misconfigurations, hardcoded credentials, and security policy violations in Terraform code before resources are ever provisioned.
+Maintaining secure cloud infrastructure requires **pre-deployment scanning** to catch misconfigurations, hardcoded credentials, and compliance violations in Terraform code before resources are ever provisioned.
 
-Key features of this repository:
-1. **Automated CI/CD Scanning:** A GitHub Actions workflow running `trivy` on every push and pull request to `main`.
-2. **HTML Report Generation:** Converts scan results into an interactive HTML report using the `scan2html` Trivy plugin.
-3. **Artifact Publishing:** Automatically attaches the generated scan report as a downloadable artifact on completed workflow runs.
+```text
++-------------------------------------------------------------------+
+|                     GitHub CI/CD Pipeline                         |
+|                                                                   |
+|                     [Push / PR to main]                           |
+|                              │                                    |
+|               ┌──────────────┴──────────────┐                     |
+|               ▼                             ▼                     |
+|     ┌──────────────────┐          ┌──────────────────┐            |
+|     │   Trivy Scan     │          │   Checkov Scan   │            |
+|     │ (GitHub Action)  │          │ (GitHub Action)  │            |
+|     └─────────┬────────┘          └─────────┬────────┘            |
+|               │                             │                     |
+|               ▼                             ▼                     |
+|    ┌──────────────────────┐      ┌──────────────────────┐         |
+|    │ trivy-terraform-     │      │ checkov-terraform-   │         |
+|    │ report (HTML)        │      │ report (HTML)        │         |
+|    └──────────────────────┘      └──────────────────────┘         |
++-------------------------------------------------------------------+
+```
 
 ---
 
-## Architecture
+## Tool Comparison: Trivy vs. Checkov
 
-```text
-+-------------------------------------------------------------+
-|                   GitHub CI/CD Pipeline                     |
-|                                                             |
-|                   [Push / PR to main]                       |
-|                            │                                |
-|                            ▼                                |
-|                  ┌──────────────────┐                       |
-|                  │   Trivy Scan     │                       |
-|                  │ (GitHub Action)  │                       |
-|                  └─────────┬────────┘                       |
-|                            │                                |
-|                            ▼                                |
-|               ┌────────────────────────┐                    |
-|               │ trivy-terraform-report │                    |
-|               │    (HTML Artifact)     │                    |
-|               └────────────────────────┘                    |
-+-------------------------------------------------------------+
-```
+| Capability / Feature | Trivy (Aqua Security) | Checkov (Bridgecrew / Prisma) |
+| :--- | :--- | :--- |
+| **Primary Strength** | Misconfiguration detection, fast CVE lookup, secret scanning | Deep policy-as-code (CIS, NIST, HIPAA, PCI-DSS) |
+| **Visual Reports** | Interactive HTML dashboard via `scan2html` | Interactive HTML dashboard via `generate_checkov_html.py` |
+| **Graph-based Analysis** | Basic dependency checks | Advanced resource dependency & connection graph |
+| **Best Used For** | Fast developer feedback & visual HTML audit reports | Rigorous compliance validation & governance gates |
 
 ---
 
@@ -62,7 +74,10 @@ Key features of this repository:
 .
 ├── .github/
 │   └── workflows/
-│       └── trivy-scan.yml       # GitHub Actions workflow for Trivy IaC scanning
+│       ├── trivy-scan.yml       # GitHub Actions workflow for Trivy IaC scanning (Part 1)
+│       └── checkov-scan.yml     # GitHub Actions workflow for Checkov compliance scanning (Part 2)
+├── scripts/
+│   └── generate_checkov_html.py # Converts Checkov JSON output into an interactive HTML dashboard
 └── terraform/
     ├── main.tf                  # AWS Provider & CloudPosse AWS Config module setup
     ├── eks.tf                   # EKS cluster configuration
@@ -74,20 +89,16 @@ Key features of this repository:
 
 ---
 
-## Automated IaC Security Scanning (CI/CD)
-
-Static code analysis is integrated directly into GitHub Actions. On every commit or pull request targeting `main`, Trivy scans all Terraform code within `./terraform`.
+## Part 1: IaC Security Scanning with Trivy
 
 ### Trivy Scan Workflow
 - **Workflow File:** [`.github/workflows/trivy-scan.yml`](.github/workflows/trivy-scan.yml)
 - **Scanner:** Aqua Security / Trivy
 - **Plugin:** `scan2html`
 - **Trigger:** `push` or `pull_request` on `main` branch
-- **Action:** Scans Terraform files for misconfigurations, generates an HTML summary report, and uploads it to GitHub Actions artifacts.
+- **Action:** Scans Terraform files for misconfigurations, generates an HTML summary report, and uploads it as a workflow artifact.
 
-### Running Scans Locally
-
-To run the scan locally on your machine using Trivy:
+### Running Trivy Locally
 
 ```bash
 # 1. Install Trivy (Linux)
@@ -97,26 +108,16 @@ curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/inst
 trivy plugin install scan2html
 
 # 3. Run IaC scan against the terraform directory
-trivy scan2html config ./terraform --scan2html-flags --output trivy-report.html
+trivy scan2html config ./terraform --scan2html-flags --output trivy-terraform-report.html
 ```
 
----
-
-## Sample Scan Reports & Findings
-
-Below are the scan report findings generated by the Trivy `scan2html` plugin for the Terraform code in this repository.
-
-### Scan Overview & Severity Breakdown
+### Trivy Scan Reports & Findings
 
 #### Misconfigurations Summary
 ![Scan Summary Overview](Screenshot%20From%202026-08-12%2019-32-27.png)
 
 #### Rule Descriptions & Severity Mapping
 ![Severity Details](Screenshot%20From%202026-08-12%2019-32-32.png)
-
----
-
-### Detailed Rule & Code Findings
 
 #### Security Group & Unencrypted SNS Topic Findings
 ![Security Group & SNS Findings](Screenshot%20From%202026-08-12%2019-32-44.png)
@@ -135,10 +136,41 @@ Below are the scan report findings generated by the Trivy `scan2html` plugin for
 
 ---
 
+## Part 2: Policy & Compliance Scanning with Checkov
+
+### Checkov Scan Workflow
+- **Workflow File:** [`.github/workflows/checkov-scan.yml`](.github/workflows/checkov-scan.yml)
+- **Scanner:** Bridgecrew / Checkov
+- **Framework:** Terraform
+- **Trigger:** `push` or `pull_request` on `main` branch
+- **Action:** Runs policy checks (including CIS benchmarks), converts output into an interactive HTML report via [`generate_checkov_html.py`](scripts/generate_checkov_html.py), and publishes the HTML artifact.
+
+### Running Checkov Locally
+
+```bash
+# 1. Install Checkov
+pip install checkov
+
+# 2. Run scan and export JSON report
+checkov -d ./terraform --framework terraform --output json --output-file-path console,checkov-report.json --soft-fail
+
+# 3. Generate interactive HTML report
+python3 scripts/generate_checkov_html.py checkov-report.json checkov-terraform-report.html
+```
+
+### Checkov HTML Report & Artifacts
+* **Dashboard Summary:** Total checks, passed checks, failed violations, and skipped policies.
+* **Search & Filters:** Real-time filtering by status (`Passed` / `Failed`) or searching by Check ID (e.g. `CKV_AWS_21`), resource name, or file.
+* **Code Previews:** Collapsible cards showing exact lines of offending Terraform code and remediation links.
+
+---
+
 ## Workflow Artifacts
 
 When a workflow run completes:
 1. Navigate to the **Actions** tab in your GitHub repository.
-2. Select the latest run of **Trivy IaC Security Scan**.
-3. Under the **Artifacts** section at the bottom, download `trivy-terraform-report`.
-4. Extract and open `trivy-terraform-report.html` in any web browser to view detailed security findings.
+2. Select any completed run of **Trivy IaC Security Scan** or **Checkov IaC Security & Compliance Scan**.
+3. Under the **Artifacts** section at the bottom, download:
+   * `trivy-terraform-report` (`trivy-terraform-report.html`)
+   * `checkov-terraform-report` (`checkov-terraform-report.html`)
+4. Open the `.html` file in any browser to inspect the visual dashboard.

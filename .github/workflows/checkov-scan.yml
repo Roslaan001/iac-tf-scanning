@@ -1,0 +1,46 @@
+name: Checkov IaC Security & Compliance Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  checkov-iac-scan:
+    name: Scan Terraform Code with Checkov
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Checkov
+        run: |
+          python -m pip install --upgrade pip
+          pip install checkov
+
+      - name: Run Checkov Scan & Generate JSON Report
+        run: |
+          checkov -d ./terraform \
+            --framework terraform \
+            --output cli \
+            --output json \
+            --output-file-path console,checkov-report.json \
+            --soft-fail
+        continue-on-error: true
+
+      - name: Generate Checkov HTML Report
+        run: |
+          python3 scripts/generate_checkov_html.py checkov-report.json checkov-terraform-report.html
+
+      - name: Upload HTML Report Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-terraform-report
+          path: checkov-terraform-report.html
